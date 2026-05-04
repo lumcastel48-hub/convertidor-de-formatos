@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MultiConvert Pro | Ecosistema de Conversión</title>
+    
+    <!-- Librerías Externas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --secondary: #10b981;
+            --dark: #1f2937;
+            --light: #f3f4f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f9fafb;
+            margin: 0;
+            display: flex;
+            color: var(--dark);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background: var(--dark);
+            color: white;
+            height: 100vh;
+            padding: 20px;
+            position: fixed;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            font-size: 1.2rem;
+            color: var(--secondary);
+            border-bottom: 1px solid #374151;
+            padding-bottom: 10px;
+        }
+
+        .nav-group { margin-bottom: 20px; }
+        .nav-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #374151;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.3s;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+        }
+        .nav-item:hover { background: var(--primary); }
+        .nav-item.active { background: var(--primary); border-left: 4px solid white; }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 340px;
+            padding: 40px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+
+        .drop-zone {
+            border: 2px dashed #d1d5db;
+            padding: 40px;
+            text-align: center;
+            border-radius: 8px;
+            margin: 20px 0;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+        .drop-zone:hover { border-color: var(--primary); background: #f0f9ff; }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            margin-top: 15px;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-family: monospace;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        .btn:disabled { background: #9ca3af; }
+
+        #preview {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            min-height: 100px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .badge {
+            font-size: 0.7rem;
+            background: #10b981;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h1>MultiConvert 🚀</h1>
+        <p style="font-size: 0.8rem; opacity: 0.7;">Ecosistema de conversión profesional</p>
+        
+        <div class="nav-group">
+            <h2>Markdown (MD)</h2>
+            <div class="nav-item active" onclick="setMode('md-html')">MD ➔ HTML <span class="badge">Web</span></div>
+            <div class="nav-item" onclick="setMode('md-pdf')">MD ➔ PDF <span class="badge">E-book</span></div>
+            <div class="nav-item" onclick="setMode('md-docx')">MD ➔ DOCX <span class="badge">Word</span></div>
+        </div>
+
+        <div class="nav-group">
+            <h2>Documentos</h2>
+            <div class="nav-item" onclick="setMode('docx-pdf')">DOCX ➔ PDF <span class="badge">Pro</span></div>
+            <div class="nav-item" onclick="setMode('docx-html')">DOCX ➔ HTML <span class="badge">Web</span></div>
+            <div class="nav-item" onclick="setMode('txt-pdf')">TXT ➔ PDF <span class="badge">Simple</span></div>
+            <div class="nav-item" onclick="setMode('pdf-docx')">PDF ➔ DOCX <span class="badge">Edit</span></div>
+        </div>
+
+        <div class="nav-group">
+            <h2>Web & Data</h2>
+            <div class="nav-item" onclick="setMode('html-pdf')">HTML ➔ PDF <span class="badge">Report</span></div>
+            <div class="nav-item" onclick="setMode('html-docx')">HTML ➔ DOCX <span class="badge">Office</span></div>
+            <div class="nav-item" onclick="setMode('xlsx-pdf')">EXCEL ➔ PDF <span class="badge">Charts</span></div>
+            <div class="nav-item" onclick="setMode('xlsx-html')">EXCEL ➔ HTML <span class="badge">Table</span></div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="card">
+            <h2 id="current-title">Markdown a HTML</h2>
+            <p id="current-desc">Publica artículos, blogs y documentación web de forma instantánea.</p>
+
+            <div id="input-area">
+                <!-- Se intercambia entre textarea y input file según el modo -->
+                <textarea id="text-input" placeholder="Pega tu contenido aquí..."></textarea>
+                <div class="drop-zone" id="file-zone" style="display:none">
+                    <p>Arrastra tu archivo aquí o haz clic para buscar</p>
+                    <input type="file" id="file-input" hidden>
+                </div>
+            </div>
+
+            <button class="btn" onclick="processConversion()">Convertir y Descargar</button>
+
+            <h3>Vista Previa</h3>
+            <div id="preview">El resultado aparecerá aquí...</div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'md-html';
+        const textInput = document.getElementById('text-input');
+        const fileZone = document.getElementById('file-zone');
+        const fileInput = document.getElementById('file-input');
+        const preview = document.getElementById('preview');
+        const title = document.getElementById('current-title');
+        const desc = document.getElementById('current-desc');
+
+        // Configuración de Modos
+        const modes = {
+            'md-html': { title: 'MD ➔ HTML', desc: 'Publica artículos y documentación.', type: 'text' },
+            'md-pdf': { title: 'MD ➔ PDF', desc: 'Crea manuales y e-books imprimibles.', type: 'text' },
+            'md-docx': { title: 'MD ➔ DOCX', desc: 'Exporta Markdown para edición en Word.', type: 'text' },
+            'docx-pdf': { title: 'DOCX ➔ PDF', desc: 'Envío profesional y formato fijo.', type: 'file', accept: '.docx' },
+            'docx-html': { title: 'DOCX ➔ HTML', desc: 'Publica documentos de Word en la web.', type: 'file', accept: '.docx' },
+            'txt-pdf': { title: 'TXT ➔ PDF', desc: 'Documentos simples para compartir.', type: 'text' },
+            'pdf-docx': { title: 'PDF ➔ DOCX', desc: 'Extrae texto de PDF a Word (Beta).', type: 'file', accept: '.pdf' },
+            'html-pdf': { title: 'HTML ➔ PDF', desc: 'Guarda páginas como informes.', type: 'text' },
+            'html-docx': { title: 'HTML ➔ DOCX', desc: 'Reutiliza contenido web en Office.', type: 'text' },
+            'xlsx-pdf': { title: 'EXCEL ➔ PDF', desc: 'Reportes y dashboards estáticos.', type: 'file', accept: '.xlsx, .xls' },
+            'xlsx-html': { title: 'EXCEL ➔ HTML', desc: 'Visualiza tus tablas en la web.', type: 'file', accept: '.xlsx, .xls' }
+        };
+
+        function setMode(mode) {
+            currentMode = mode;
+            const config = modes[mode];
+            title.innerText = config.title;
+            desc.innerText = config.desc;
+            
+            // UI Toggle
+            if(config.type === 'text') {
+                textInput.style.display = 'block';
+                fileZone.style.display = 'none';
+            } else {
+                textInput.style.display = 'none';
+                fileZone.style.display = 'block';
+                fileInput.accept = config.accept;
+            }
+
+            // UI Active Class
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            preview.innerHTML = "Esperando entrada...";
+        }
+
+        // Gestión de Archivos
+        fileZone.onclick = () => fileInput.click();
+        fileInput.onchange = (e) => {
+            const fileName = e.target.files[0]?.name;
+            if(fileName) fileZone.querySelector('p').innerText = "Archivo seleccionado: " + fileName;
+        };
+
+        // LÓGICA DE CONVERSIÓN PRINCIPAL
+        async function processConversion() {
+            try {
+                let content = "";
+                const file = fileInput.files[0];
+
+                switch(currentMode) {
+                    case 'md-html':
+                        content = marked.parse(textInput.value);
+                        preview.innerHTML = content;
+                        downloadFile(content, 'documento.html', 'text/html');
+                        break;
+
+                    case 'md-pdf':
+                        content = marked.parse(textInput.value);
+                        preview.innerHTML = content;
+                        generatePDF(content);
+                        break;
+
+                    case 'md-docx':
+                        content = marked.parse(textInput.value);
+                        downloadAsDocx(content, 'markdown-convert');
+                        break;
+
+                    case 'docx-html':
+                        if(!file) return alert("Sube un archivo DOCX");
+                        const arrayBuffer = await file.arrayBuffer();
+                        const result = await mammoth.convertToHtml({arrayBuffer: arrayBuffer});
+                        preview.innerHTML = result.value;
+                        downloadFile(result.value, 'word-convert.html', 'text/html');
+                        break;
+
+                    case 'docx-pdf':
+                        if(!file) return alert("Sube un archivo DOCX");
+                        const ab = await file.arrayBuffer();
+                        const res = await mammoth.convertToHtml({arrayBuffer: ab});
+                        generatePDF(res.value);
+                        break;
+
+                    case 'txt-pdf':
+                        content = `<pre>${textInput.value}</pre>`;
+                        generatePDF(content);
+                        break;
+
+                    case 'html-pdf':
+                        generatePDF(textInput.value);
+                        break;
+
+                    case 'html-docx':
+                        downloadAsDocx(textInput.value, 'html-convert');
+                        break;
+
+                    case 'xlsx-html':
+                        if(!file) return alert("Sube un Excel");
+                        const data = await file.arrayBuffer();
+                        const workbook = XLSX.read(data);
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        content = XLSX.utils.sheet_to_html(firstSheet);
+                        preview.innerHTML = content;
+                        downloadFile(content, 'excel.html', 'text/html');
+                        break;
+
+                    case 'xlsx-pdf':
+                        if(!file) return alert("Sube un Excel");
+                        const d = await file.arrayBuffer();
+                        const wb = XLSX.read(d);
+                        const ws = wb.Sheets[wb.SheetNames[0]];
+                        content = `<h2>Reporte Excel</h2>${XLSX.utils.sheet_to_html(ws)}`;
+                        generatePDF(content);
+                        break;
+
+                    case 'pdf-docx':
+                        alert("La conversión PDF -> DOCX requiere procesamiento OCR de servidor para alta calidad. En esta demo, se recomienda usar Word directamente para abrir el PDF.");
+                        break;
+
+                    default:
+                        alert("Función en desarrollo para este modo.");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Error en la conversión: " + err.message);
+            }
+        }
+
+        // Helpers de Descarga y Generación
+        function downloadFile(content, filename, contentType) {
+            const blob = new Blob([content], { type: contentType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+        }
+
+        function generatePDF(htmlContent) {
+            const opt = {
+                margin:       1,
+                filename:     'archivo-convertido.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(htmlContent).save();
+        }
+
+        function downloadAsDocx(htmlContent, filename) {
+            // Truco de encapsulamiento HTML para que Word lo reconozca
+            const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' "+
+                "xmlns:w='urn:schemas-microsoft-com:office:word' "+
+                "xmlns='http://www.w3.org/TR/REC-html40'>"+
+                "<head><meta charset='utf-8'><title>Export DOCX</title></head><body>";
+            const footer = "</body></html>";
+            const sourceHTML = header + htmlContent + footer;
+            
+            const blob = new Blob(['\ufeff', sourceHTML], {
+                type: 'application/msword'
+            });
+            
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename + ".doc"; // Se descarga como .doc compatible con Word
+            a.click();
+        }
+    </script>
+</body>
+</html>
